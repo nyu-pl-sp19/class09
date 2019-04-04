@@ -367,8 +367,8 @@ int}`. Another one is σ'=`{'a ↦ 'a, 'b ↦ 'b}`.
 
 Applying a substitution σ to a type `t`, written `t`σ, results in the
 type `t` where all occurrences of type variables have been replaced
-according to σ. For instance, if `t` = `'a -> 'b` and σ = `{'a -> int,
-'b -> int}`, then `t`σ = `int -> int`.
+according to σ. For instance, if `t` = `'a -> 'b` and 
+σ = `{'a -> int, 'b -> int}`, then `t`σ = `int -> int`.
 
 Two types `s` and `t` are said to be *unifiable* if there exists a
 substitution σ for the type variables occurring in both `s` and `t`
@@ -894,11 +894,11 @@ and Scala. This problem also does not arise in dynamically typed
 languages like JavaScript. For instance, the corresponding JavaScript program
 will execute just fine:
 
-```scheme
+```javascript
 function g(f) {
   return [f(true), f(0)];
-};
-function id (x) { return x; };
+}
+function id(x) { return x; }
 g(id);
 ```
 
@@ -931,7 +931,7 @@ print_more "Hello" "World" "how" "are" "you"
 ```
 
 While the function `print_more` should behave just fine when it
-executes (and a corresponding Scheme version indeed works as
+executes (and e.g. a corresponding JavaScript version indeed works as
 expected), it is rejected by the OCaml type checker:
 
 ```ocaml
@@ -984,9 +984,9 @@ The equation
 
 tells us that the return type of `hungry` is the same type as the type
 of `hungry` itself. However, such recursive types cannot be expressed
-in OCaml's type system directly for otherwise, the type inference
-problem would again become unsolvable. As we shall see, there is a
-workaround for this restriction: OCaml allows recursive types to be
-introduced explicitly. However, this workaround slightly complicates
-the implementation of the function `hungry`.
+in OCaml's type system directly, for otherwise, the type inference
+problem would again become unsolvable. There is a workaround for this
+restriction: OCaml allows recursive types to be introduced
+explicitly. However, this workaround slightly complicates the
+implementation of the function `hungry`.
 
