@@ -990,3 +990,217 @@ restriction: OCaml allows recursive types to be introduced
 explicitly. However, this workaround slightly complicates the
 implementation of the function `hungry`.
 
+### Type Inhabitation
+
+The type inference problem takes an expression as input and returns
+the type that makes that expression well-typed (if such a type
+exists). We can also look at the inverse problem. That is, given a
+type, the goal is to infer an expression that has that type. This
+problem is referred to as the *type inhabitation* problem. Type
+inhabitation has many interesting applications (e.g. it is used by
+some IDEs to implement automatic code completion like IntelliSense).
+
+As an example, consider the following algebraic data type:
+
+```ocaml
+type ('a, 'b) either =
+  | Left of 'a
+  | Right of 'b
+```
+
+The type `('a, 'b) either` is parametric in two types: `'a` and
+`'b`. It's values take the form `Left a` where `a` is a value of type
+`'a` and `Right b` where `b` is a value of type `'b`. That is, `('a,
+'b) either` can be viewed as the disjoint union of the types `'a` and
+`'b`.
+
+Now let us consider the following type signature of a purported
+function `f`:
+
+```ocaml
+f: ('a, 'b) either * ('a, 'c) either -> ('a, 'b * 'c) either
+```
+
+Our goal is to infer a definition of a function `f` that has this
+type. 
+
+We can approach this problem systematically by analyzing the structure
+of the type expression. First note that `f` is a function that takes a
+parameter of type `('a, 'b) either * ('a, 'b) either` and returns a
+value of type `('a, 'b * 'c) either`. Since the former is a product
+type, it denotes pairs of values. Hence, we can further split this
+parameter into two parts denoting the first and second component of
+the pair. That is, the basic shape of the definition of `f` that we
+seek must be of the form:
+
+```ocaml
+let f (x, y) = e
+```
+
+for some expression `e` such that
+
+```ocaml
+x: ('a, 'b) either 
+y: ('a, 'c) either
+e: ('a, 'b * 'c) either
+```
+
+Now to derive the expression `e`, let us analyze the shape of the
+values that inhabit the type `('a, 'b * 'c) either`. These take the
+form `Left a` for some value `a` of type `'a`, respectively, `Right
+(b, c)` for some values `b: 'b` and `c: 'c`. We thus seek an
+expression `e` that constructs such values from the parameters `x` and
+`y` of `f`.
+
+Now, the required type `('a, 'b) either` has values of the shape 
+`Left a1` and `Left b` for values `a1: 'a` and `b: 'b`. Likewise, `y`
+has values `Left a2` and `Right c` for `a2: 'a` and `c: 'c`. To
+construct values of the shape `Left a` or `Right (b, c)` we just need
+to consider all the possible combinations in which the values of the
+types of `x` and `y` can occur. This can be done with pattern
+matching, which leads to the following definition of the function `f`:
+
+```ocaml
+let f (x, y) =
+  match x, y with
+  | Left a1, Left a2 -> Left a1 (** Left a2 would also work *)
+  | Left a1, Right c -> Left a1
+  | Right b, Left a2 -> Left a2
+  | Right b, Right c -> Right (b, c)
+```
+
+Note that the match cases enumerate all the possible combinations of
+the values that `x` and `y` can take. Moreover, in each case, we
+return a value of type `('a, 'b * 'c) either`.
+
+The above definition can be further simplified as follows:
+
+```ocaml
+let f (x, y) =
+  match x, y with
+  | Left a, _ | _, Left a -> Left a
+  | Right b, Right c -> Right (b, c)
+```
+
+Note that the definition of `f` could be inferred using only deduction
+based on the information that the type signatures provide. There was
+no guessing involved. The goal of this exercise is to train your
+intuition in how to use these polymorphic types.
+
+ 
+One observation that might help understanding this problem better is
+to look at it from a different perspective by exploiting something
+that is known as *Curry-Howard Correspondence*. Roughly speaking, the
+Curry-Howard Correspondence establishes an equivalence between
+inferring an expression for a given type and the problem of proving
+the validity of a logical formula obtained from that type.
+
+Specifically, the polymorphic types that we are dealing with in this
+problem can be interpreted as formulas in propositional logic where
+
+* Type variables like `'a` and `'b` correspond to proposition
+  variables that take on the truth values `true` and `false`.
+
+* Function types `'a -> 'b` correspond to logical implications
+  (written `'a => 'b`). Here, `'a => 'b` states that if `'a` is `true`
+  then so is `'b`.
+
+* Product types `'a * 'b` correspond to logical conjunctions (written
+  `'a && 'b`). Here `'a && 'b` is `true` iff both `'a` and `'b` is `true`.
+
+* Either types `('a, 'b) either` correspond to logical disjunctions
+  (written `'a || 'b`). Here `'a || 'b` is `true` iff one of `'a` or
+  `'b` is `true`.
+
+Hence, the type
+ 
+```ocaml
+('a, 'b) either * ('a, 'c) either -> ('a, 'b * 'c) either
+```
+
+that we considered above can be viewed as the propositional formula
+
+```ocaml
+('a || 'b) && ('a || 'c) => 'a || 'b && 'c
+```
+
+which states that if `'a || 'b` is `true` and `'a || 'c` is `true`
+then `'a` is `true` or both `'b` and `'c` are `true`. In other words,
+logical conjunction distributes over logical disjunction. This formula
+is valid, i.e., it evaluates to `true` regardless of what truth values
+we assign to `'a`, `'b`, and `'c`.
+
+This property can be proven using logical deduction. To this end, we
+start by assuming that the left-hand side of the implication is
+`true`, which because it is a conjunction means that both `('a || 'b)`
+and `('a || 'c)` must be `true`. We now do case analysis on what we
+know about these two formulas. From the fact that `('a || 'b)` is true
+we know that either `'a` is `true` or `'b` is `'true`:
+
+* Case 1 (`'a'` is `true`): then it immediately follows that `('a || 'b
+  && 'c)` is also `true`.
+
+* Case 2 (`'b` is `true`): then we case split on `('a || 'c)`:
+
+  * Case 2.1 (`'a` is `true`): again it immediately follows that `('a ||
+    'b && 'c)` is also `true`.
+
+  * Case 2.2 (`'c` is `true`): then `'b && 'c` is `true` and hence
+    also `('a || 'b && 'c)`.
+    
+Notice the similarity between the structure of this proof and the
+structure of the definition of the function `f`. Assuming the premise
+`('a || 'b) && ('a || 'c)` of the implication and splitting it into
+`('a || 'b)` and `('a || 'c)` corresponds to assuming that we are
+given the parameter of the function `f` and then split it into its
+components `x` and `y`. Likewise, the case analysis on `(a || 'b)` and
+`('a || 'c)` corresponds to the case analysis in the match expression.
+
+That is, when solving the problem of inferring a definition for the
+function `f` that has the given type, we can solve this problem in
+logic by proving the validity of the formula corresponding to `f`'s
+purported type and then translate that proof to a corresponding
+`OCaml` definition.
+
+
+```ocaml
+g: ('a, 'b) either * ('a -> 'c) * ('b -> 'c) -> 'c
+```
+ 
+can be viewed as the propositional formula
+
+ 
+```
+('a || 'b) && ('a => 'c) && ('b => 'c) => 'c
+```
+ 
+
+which states that if
+
+(1) `'a` or `'b` is `true`, and
+
+(2) `'a` implies `'c`, and
+
+(3) `'b` implies `'c`
+
+then `'c` is `true`
+
+ 
+Again, this formula is valid, which can be seen as follows: because `'a`
+or `'b` is `true` according to (1), we can case split on the two cases:
+
+* Case 1 (`'a` is `true`): Then it follows from (2) that `'c` is `true`. 
+
+* Case 2 (`'b` is `true`). Then, it follows from (3) that `'c` is `true`. 
+
+By constructing an OCaml term that has type `'c` from values that
+represent the premises (1), (2), and (3), you are effectively
+constructing a mathematical proof as described above. In this proof,
+pattern matching on a value of type `('a, 'b) either` corresponds to
+case splitting on a valid disjunction `('a || 'b)`. Similarly,
+applying a function `('a -> 'b)` to an argument of type `'a`
+corresponds to, *modus ponens*, i.e. the logical deduction step where
+the validity of the conclusion `'b` of a valid implication 
+`('a => 'b)` is inferred from the validity of its premise `'a`. So using the above
+proof, you can directly obtain the definition of the function
+`g` that has the given type.
