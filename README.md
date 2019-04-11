@@ -1198,9 +1198,9 @@ represent the premises (1), (2), and (3), you are effectively
 constructing a mathematical proof as described above. In this proof,
 pattern matching on a value of type `('a, 'b) either` corresponds to
 case splitting on a valid disjunction `('a || 'b)`. Similarly,
-applying a function `('a -> 'b)` to an argument of type `'a`
+applying a function `('a -> 'c)` to an argument of type `'a`
 corresponds to, *modus ponens*, i.e. the logical deduction step where
-the validity of the conclusion `'b` of a valid implication 
-`('a => 'b)` is inferred from the validity of its premise `'a`. So using the above
+the validity of the conclusion `'c` of a valid implication 
+`('a => 'c)` is inferred from the validity of its premise `'a`. So using the above
 proof, you can directly obtain the definition of the function
 `g` that has the given type.
