@@ -328,7 +328,7 @@ Type that do not contain any type variables such as `int -> int`, `int
 
 The first question we have to answer is how different types relate. A
 value `v` of type `t` is compatible with type `s` if `v` can be used
-in a context that expects a value of type `t`. In OCaml, this is true
+in a context that expects a value of type `s`. In OCaml, this is true
 whenever the type `t` is *more general* than the type `s`.  This
 definition may seem counter-intuitive at first. However, it captures
 the idea that a type `t` that is more general than another type `s`
